@@ -2,6 +2,10 @@
 #include <Geode/modify/PlayerObject.hpp>
 using namespace geode::prelude;
 
+static bool dbg() {
+	return Mod::get()->getSettingValue<bool>("debug");
+}
+
 class $modify(PBPlayer, PlayerObject) {
 	struct Fields {
 		bool pending = false;
@@ -21,16 +25,25 @@ class $modify(PBPlayer, PlayerObject) {
 
 	bool pushButton(PlayerButton btn) {
 		auto f = m_fields.self();
-		if (f->replaying || btn != PlayerButton::Jump ||
-		    !Mod::get()->getSettingValue<bool>("enabled"))
+		bool enabled = Mod::get()->getSettingValue<bool>("enabled");
+
+		if (dbg()) {
+			log::info("PIB press: btn={} ground={} yVel={} cube={} falling={} enabled={}",
+				static_cast<int>(btn), m_isOnGround, m_yVelocity,
+				isCubeMode(), isFalling(), enabled);
+		}
+
+		if (f->replaying || btn != PlayerButton::Jump || !enabled)
 			return PlayerObject::pushButton(btn);
 
 		if (isCubeMode() && !m_isOnGround && isFalling()) {
 			f->pending = true;
 			f->releaseQueued = false;
 			f->framesLeft = Mod::get()->getSettingValue<int64_t>("window");
+			if (dbg()) log::info("PIB buffered, window={}", f->framesLeft);
 			return true;
 		}
+		if (dbg()) log::info("PIB passed through (not buffering)");
 		return PlayerObject::pushButton(btn);
 	}
 
@@ -38,6 +51,7 @@ class $modify(PBPlayer, PlayerObject) {
 		auto f = m_fields.self();
 		if (!f->replaying && f->pending && btn == PlayerButton::Jump) {
 			f->releaseQueued = true;
+			if (dbg()) log::info("PIB release queued");
 			return true;
 		}
 		return PlayerObject::releaseButton(btn);
@@ -49,6 +63,7 @@ class $modify(PBPlayer, PlayerObject) {
 		if (!f->pending) return;
 
 		if (m_isOnGround) {
+			if (dbg()) log::info("PIB fired on landing");
 			f->replaying = true;
 			PlayerObject::pushButton(PlayerButton::Jump);
 			if (f->releaseQueued) PlayerObject::releaseButton(PlayerButton::Jump);
@@ -56,6 +71,7 @@ class $modify(PBPlayer, PlayerObject) {
 			f->pending = false;
 			f->releaseQueued = false;
 		} else if (--f->framesLeft <= 0) {
+			if (dbg()) log::info("PIB window expired");
 			f->pending = false;
 			f->releaseQueued = false;
 		}
