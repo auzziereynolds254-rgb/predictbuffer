@@ -1,0 +1,16 @@
+{
+	"geode": "5.11.2",
+	"gd": { "win": "2.2081" },
+	"version": "v1.0.0",
+	"id": "lilwc.predictivebuffer",
+	"name": "Predictive Input Buffer",
+	"developer": "lilWC",
+	"description": "Buffers jump presses made shortly before landing.",
+	"settings": {
+		"enabled": { "type": "bool", "name": "Enabled", "default": true },
+		"window": {
+			"type": "int", "name": "Buffer window (frames)",
+			"default": 2, "min": 1, "max": 4
+		}
+	}
+}
